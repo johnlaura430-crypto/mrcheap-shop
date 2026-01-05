@@ -30,7 +30,6 @@ export const shopConfig = {
     decimalSeparator: ".",
   },
 
-  
   // ===== SHOP CATEGORIES =====
   categories: [
     { id: "electronics", name: "Electronics", icon: "📱" },
@@ -93,7 +92,6 @@ export const shopConfig = {
     enableExpiryTracking: false,
   },
   
-  
   // ===== RECEIPT SETTINGS =====
   receipt: {
     header: "Thank you for shopping with us!",
@@ -137,13 +135,14 @@ export const shopConfig = {
     thursday: { open: "10:00", close: "20:00" },
     friday: { open: "10:00", close: "20:00" },
     saturday: { open: "10:00", close: "16:00" },
-    sunday: "Closed",
-    holidays: "Closed",
+    sunday: "closed",
   },
+
+  holidays: ["01-01", "12-25"], // Fixed: Array of dates, not string
   
   // ===== SYSTEM SETTINGS =====
   system: {
-    timezone: "Tanzania/Dar es salaam",
+    timezone: "Africa/Dar_es_Salaam", // Fixed timezone
     dateFormat: "DD/MM/YYYY",
     timeFormat: "HH:mm",
     autoBackup: true,
@@ -152,4 +151,4 @@ export const shopConfig = {
     maxLoginAttempts: 5,
     passwordMinLength: 8,
   },
-};
+}; // Don't forget this closing brace!

@@ -137,8 +137,8 @@ export const shopConfig = {
     thursday: { open: "10:00", close: "20:00" },
     friday: { open: "10:00", close: "20:00" },
     saturday: { open: "10:00", close: "16:00" },
-    sunday: { "Closed" },
-    holidays: {"Closed"},
+    sunday: "Closed",
+    holidays: "Closed",
   },
   
   // ===== SYSTEM SETTINGS =====

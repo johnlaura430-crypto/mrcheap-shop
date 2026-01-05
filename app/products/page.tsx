@@ -15,7 +15,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { Navigation } from '../components/Navigation';
-import { supabase, getProducts, addProduct, deleteProduct } from '../lib/supabase';
+import { getProducts, addProduct, deleteProduct, type Product } from '../lib/supabase'; // ADD "type Product" here!
 
 interface Product {
   id: number;

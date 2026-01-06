@@ -7,13 +7,14 @@ export function Navigation() {
   const router = useRouter();
   const pathname = usePathname();
   
-  const navItems = [
-    { label: 'Dashboard', icon: Home, href: '/dashboard' },
-    { label: 'Products', icon: Package, href: '/products' },
-    { label: 'POS', icon: ShoppingCart, href: '/pos' },
-    { label: 'Customers', icon: Users, href: '/customers' },
-    { label: 'Reports', icon: BarChart3, href: '/reports' },
-  ];
+ 
+const navItems = [
+  { label: 'Dashboard', icon: Home, href: '/dashboard' },
+  { label: 'Products', icon: Package, href: '/products-new' }, // ← CHANGE THIS!
+  { label: 'POS', icon: ShoppingCart, href: '/pos' },
+  { label: 'Customers', icon: Users, href: '/customers' },
+  { label: 'Reports', icon: BarChart3, href: '/reports' },
+];
 
   const isActive = (href: string) => pathname === href;
 

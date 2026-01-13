@@ -1,3 +1,13 @@
+console.log('App.js loaded');
+console.log('Supabase URL:', SUPABASE_URL ? 'Set' : 'NOT SET');
+
+// Test Supabase connection
+supabase.from('items').select('count').then(response => {
+    console.log('Supabase connection test:', response.error ? 'Failed' : 'Success');
+}).catch(error => {
+    console.error('Supabase connection error:', error);
+});
+
 // Supabase configuration
 const SUPABASE_URL = 'https://vnuipfkdhtajjbuwmkbf.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZudWlwZmtkaHRhampidXdta2JmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyOTQzNzksImV4cCI6MjA4Mzg3MDM3OX0.Qq2q3pqoQ3No6PO2LEQuYpZZckCmP6M2b50tx719M5Q';

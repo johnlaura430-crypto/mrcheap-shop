@@ -12,6 +12,7 @@ const translations = {
         username: "Username",
         password: "Password",
         logout: "Logout",
+        invalidCredentials: "Invalid username or password",
         
         // Navigation
         dashboard: "Dashboard",
@@ -81,6 +82,7 @@ const translations = {
         username: "Jina la Mtumiaji",
         password: "Nenosiri",
         logout: "Toka",
+        invalidCredentials: "Nenosiri au jina la mtumiaji si sahihi",
         
         // Navigation
         dashboard: "Dashibodi",
@@ -146,7 +148,7 @@ const translations = {
     }
 };
 
-// Simple bcrypt hash comparison (for demo - use proper auth in production)
+// Simple user credentials (for demo - in production use Supabase Auth)
 const users = {
     'admin': 'admin123',
     'mlawa': 'admin123'
@@ -168,7 +170,11 @@ function updateTranslations() {
     document.querySelectorAll('[data-i18n]').forEach(element => {
         const key = element.getAttribute('data-i18n');
         if (translations[currentLanguage][key]) {
-            element.textContent = translations[currentLanguage][key];
+            if (element.type === 'submit' || element.type === 'button') {
+                element.value = translations[currentLanguage][key];
+            } else {
+                element.textContent = translations[currentLanguage][key];
+            }
         }
     });
 }
@@ -180,16 +186,18 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
     
-    // Simple authentication (replace with Supabase auth in production)
-    if ((username === 'admin' || username === 'mlawa') && password === 'admin123') {
+    // Simple authentication check
+    if (users[username] && users[username] === password) {
         currentUser = username;
         document.getElementById('loginScreen').classList.add('d-none');
         document.getElementById('app').classList.remove('d-none');
         showSection('dashboard');
         loadDashboard();
     } else {
-        document.getElementById('loginMessage').textContent = 
-            currentLanguage === 'en' ? 'Invalid credentials' : 'Nenosiri au jina la mtumiaji si sahihi';
+        const message = currentLanguage === 'en' 
+            ? 'Invalid username or password' 
+            : 'Nenosiri au jina la mtumiaji si sahihi';
+        document.getElementById('loginMessage').textContent = message;
         document.getElementById('loginMessage').classList.remove('d-none');
     }
 });
@@ -199,6 +207,7 @@ function logout() {
     document.getElementById('app').classList.add('d-none');
     document.getElementById('loginScreen').classList.remove('d-none');
     document.getElementById('loginForm').reset();
+    document.getElementById('loginMessage').classList.add('d-none');
 }
 
 // Section navigation
@@ -232,32 +241,51 @@ async function loadDashboard() {
     const today = new Date().toISOString().split('T')[0];
     
     // Get today's sales
-    const { data: todaySales } = await supabase
+    const { data: todaySales, error: salesError } = await supabase
         .from('sales')
         .select('total_amount')
         .eq('sale_date', today);
     
+    if (salesError) {
+        console.error('Error fetching sales:', salesError);
+    }
+    
     const totalSales = todaySales?.reduce((sum, sale) => sum + parseFloat(sale.total_amount), 0) || 0;
     
     // Get all items for stock valuation
-    const { data: items } = await supabase.from('items').select('*');
-    const stockValue = items?.reduce((sum, item) => sum + (item.stock * item.buying_price), 0) || 0;
+    const { data: items, error: itemsError } = await supabase.from('items').select('*');
+    
+    if (itemsError) {
+        console.error('Error fetching items:', itemsError);
+    }
+    
+    const stockValue = items?.reduce((sum, item) => sum + (item.stock * parseFloat(item.buying_price)), 0) || 0;
     
     // Get low stock items (less than 10)
     const lowStock = items?.filter(item => item.stock < 10) || [];
+    
+    // Get recent sales
+    const { data: recentSales, error: recentError } = await supabase
+        .from('sales')
+        .select(`
+            *,
+            items (name)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(5);
     
     const html = `
         <div class="row">
             <div class="col-md-4">
                 <div class="stat-card primary">
                     <h5 data-i18n="todaysSales">Today's Sales</h5>
-                    <h3>${totalSales.toFixed(2)}</h3>
+                    <h3>$${totalSales.toFixed(2)}</h3>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="stat-card success">
                     <h5 data-i18n="currentStockValue">Current Stock Value</h5>
-                    <h3>${stockValue.toFixed(2)}</h3>
+                    <h3>$${stockValue.toFixed(2)}</h3>
                 </div>
             </div>
             <div class="col-md-4">
@@ -294,7 +322,28 @@ async function loadDashboard() {
                         <h5>Recent Sales</h5>
                     </div>
                     <div class="card-body">
-                        <!-- Recent sales will be loaded here -->
+                        ${recentSales && recentSales.length > 0 ? `
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Qty</th>
+                                        <th>Amount</th>
+                                        <th>Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${recentSales.map(sale => `
+                                        <tr>
+                                            <td>${sale.items.name}</td>
+                                            <td>${sale.quantity}</td>
+                                            <td>$${parseFloat(sale.total_amount).toFixed(2)}</td>
+                                            <td>${sale.sale_date}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        ` : '<p>No recent sales</p>'}
                     </div>
                 </div>
             </div>
@@ -307,127 +356,86 @@ async function loadDashboard() {
 
 // Load Items Management
 async function loadItems() {
-    const { data: items } = await supabase.from('items').select('*').order('name');
+    const { data: items, error } = await supabase.from('items').select('*').order('name');
+    
+    if (error) {
+        alert('Error loading items: ' + error.message);
+        return;
+    }
     
     const html = `
-        <div class="card">
-            <div class="card-header d-flex justify-content-between">
-                <h5 data-i18n="items">Items</h5>
-                <button class="btn btn-primary btn-sm" onclick="showAddItemForm()" data-i18n="addItem">Add Item</button>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th data-i18n="itemName">Item Name</th>
-                                <th data-i18n="buyingPrice">Buying Price</th>
-                                <th data-i18n="sellingPrice">Selling Price</th>
-                                <th data-i18n="stock">Stock</th>
-                                <th data-i18n="actions">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${items.map(item => `
-                                <tr>
-                                    <td>${item.name}</td>
-                                    <td>${parseFloat(item.buying_price).toFixed(2)}</td>
-                                    <td>${parseFloat(item.selling_price).toFixed(2)}</td>
-                                    <td>${item.stock}</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-warning" onclick="editItem('${item.id}')" data-i18n="edit">Edit</button>
-                                        <button class="btn btn-sm btn-danger" onclick="deleteItem('${item.id}')" data-i18n="delete">Delete</button>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.getElementById('content').innerHTML = html;
-    updateTranslations();
-}
-
-// Load Purchases
-async function loadPurchases() {
-    const { data: purchases } = await supabase
-        .from('purchases')
-        .select(`
-            *,
-            items (name)
-        `)
-        .order('purchase_date', { ascending: false });
-    
-    const { data: items } = await supabase.from('items').select('id, name').order('name');
-    
-    const html = `
-        <div class="card">
-            <div class="card-header d-flex justify-content-between">
-                <h5 data-i18n="purchases">Purchases</h5>
-                <button class="btn btn-primary btn-sm" onclick="showAddPurchaseForm()" data-i18n="addPurchase">Add Purchase</button>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th data-i18n="date">Date</th>
-                                <th data-i18n="itemName">Item Name</th>
-                                <th data-i18n="quantity">Quantity</th>
-                                <th data-i18n="unitPrice">Unit Price</th>
-                                <th data-i18n="totalAmount">Total Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${purchases.map(purchase => `
-                                <tr>
-                                    <td>${purchase.purchase_date}</td>
-                                    <td>${purchase.items.name}</td>
-                                    <td>${purchase.quantity}</td>
-                                    <td>${parseFloat(purchase.unit_price).toFixed(2)}</td>
-                                    <td>${parseFloat(purchase.total_amount).toFixed(2)}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 data-i18n="items">Items</h5>
+                        <button class="btn btn-primary btn-sm" onclick="showAddItemForm()" data-i18n="addItem">Add Item</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th data-i18n="itemName">Item Name</th>
+                                        <th data-i18n="buyingPrice">Buying Price</th>
+                                        <th data-i18n="sellingPrice">Selling Price</th>
+                                        <th data-i18n="stock">Stock</th>
+                                        <th data-i18n="actions">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${items && items.length > 0 ? items.map(item => `
+                                        <tr>
+                                            <td>${item.name}</td>
+                                            <td>$${parseFloat(item.buying_price).toFixed(2)}</td>
+                                            <td>$${parseFloat(item.selling_price).toFixed(2)}</td>
+                                            <td>${item.stock}</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-warning" onclick="editItem('${item.id}')" data-i18n="edit">Edit</button>
+                                                <button class="btn btn-sm btn-danger" onclick="deleteItem('${item.id}')" data-i18n="delete">Delete</button>
+                                            </td>
+                                        </tr>
+                                    `).join('') : `
+                                        <tr>
+                                            <td colspan="5" class="text-center">No items found</td>
+                                        </tr>
+                                    `}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
         
-        <!-- Add Purchase Form (hidden) -->
-        <div id="addPurchaseForm" class="card mt-4 d-none">
+        <!-- Add Item Form (hidden initially) -->
+        <div id="addItemForm" class="card mt-4 d-none">
             <div class="card-header">
-                <h5 data-i18n="addPurchase">Add Purchase</h5>
+                <h5 data-i18n="addItem">Add Item</h5>
             </div>
             <div class="card-body">
-                <form id="purchaseForm">
+                <form id="itemForm">
                     <div class="row">
-                        <div class="col-md-4">
-                            <label data-i18n="selectItem">Select Item</label>
-                            <select class="form-control" id="purchaseItem" required>
-                                <option value="">-- Select --</option>
-                                ${items.map(item => `<option value="${item.id}">${item.name}</option>`).join('')}
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <label data-i18n="quantity">Quantity</label>
-                            <input type="number" class="form-control" id="purchaseQuantity" required min="1">
+                        <div class="col-md-3">
+                            <label data-i18n="itemName">Item Name</label>
+                            <input type="text" class="form-control" id="itemName" required>
                         </div>
                         <div class="col-md-3">
-                            <label data-i18n="unitPrice">Unit Price</label>
-                            <input type="number" class="form-control" id="purchaseUnitPrice" required min="0" step="0.01">
+                            <label data-i18n="buyingPrice">Buying Price</label>
+                            <input type="number" class="form-control" id="itemBuyingPrice" required min="0" step="0.01">
                         </div>
                         <div class="col-md-3">
-                            <label data-i18n="purchaseDate">Purchase Date</label>
-                            <input type="date" class="form-control" id="purchaseDate" value="${new Date().toISOString().split('T')[0]}" required>
+                            <label data-i18n="sellingPrice">Selling Price</label>
+                            <input type="number" class="form-control" id="itemSellingPrice" required min="0" step="0.01">
+                        </div>
+                        <div class="col-md-3">
+                            <label data-i18n="stock">Initial Stock</label>
+                            <input type="number" class="form-control" id="itemStock" value="0" min="0">
                         </div>
                     </div>
                     <div class="mt-3">
                         <button type="submit" class="btn btn-primary" data-i18n="save">Save</button>
-                        <button type="button" class="btn btn-secondary" onclick="cancelAddPurchase()" data-i18n="cancel">Cancel</button>
+                        <button type="button" class="btn btn-secondary" onclick="cancelAddItem()" data-i18n="cancel">Cancel</button>
                     </div>
                 </form>
             </div>
@@ -437,67 +445,65 @@ async function loadPurchases() {
     document.getElementById('content').innerHTML = html;
     updateTranslations();
     
-    // Add form submit handler
-    document.getElementById('purchaseForm')?.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const itemId = document.getElementById('purchaseItem').value;
-        const quantity = parseInt(document.getElementById('purchaseQuantity').value);
-        const unitPrice = parseFloat(document.getElementById('purchaseUnitPrice').value);
-        const purchaseDate = document.getElementById('purchaseDate').value;
-        
+    // Add form submit handler for item form
+    const itemForm = document.getElementById('itemForm');
+    if (itemForm) {
+        itemForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('itemName').value;
+            const buyingPrice = parseFloat(document.getElementById('itemBuyingPrice').value);
+            const sellingPrice = parseFloat(document.getElementById('itemSellingPrice').value);
+            const stock = parseInt(document.getElementById('itemStock').value) || 0;
+            
+            const { error } = await supabase
+                .from('items')
+                .insert([{
+                    name: name,
+                    buying_price: buyingPrice,
+                    selling_price: sellingPrice,
+                    stock: stock
+                }]);
+            
+            if (!error) {
+                alert('Item added successfully!');
+                cancelAddItem();
+                loadItems();
+            } else {
+                alert('Error: ' + error.message);
+            }
+        });
+    }
+}
+
+function showAddItemForm() {
+    document.getElementById('addItemForm').classList.remove('d-none');
+}
+
+function cancelAddItem() {
+    document.getElementById('addItemForm').classList.add('d-none');
+    document.getElementById('itemForm').reset();
+}
+
+async function editItem(itemId) {
+    // You can implement this later
+    alert('Edit functionality coming soon!');
+}
+
+async function deleteItem(itemId) {
+    if (confirm('Are you sure you want to delete this item?')) {
         const { error } = await supabase
-            .from('purchases')
-            .insert([{
-                item_id: itemId,
-                quantity: quantity,
-                unit_price: unitPrice,
-                total_amount: quantity * unitPrice,
-                purchase_date: purchaseDate
-            }]);
+            .from('items')
+            .delete()
+            .eq('id', itemId);
         
         if (!error) {
-            alert('Purchase recorded successfully!');
-            cancelAddPurchase();
-            loadPurchases();
+            alert('Item deleted successfully!');
+            loadItems();
         } else {
             alert('Error: ' + error.message);
         }
-    });
-}
-
-// Similar functions for Sales, Expenses, and Reports
-// Due to length, I'll show structure for others:
-
-async function loadSales() {
-    // Similar to purchases but for sales
-    // Add sales form with item selection, quantity, unit price
-}
-
-async function loadExpenses() {
-    // Simple expense form with description, amount, date
-}
-
-async function loadReports() {
-    // Generate reports with date filters
-    // 1. Purchase Report
-    // 2. Sales Report
-    // 3. Stock Valuation (current stock * buying price)
-    // 4. Profit & Loss (Revenue - COGS - Expenses)
-}
-
-// Form display functions
-function showAddItemForm() {
-    // Show form to add new item
-}
-
-function showAddPurchaseForm() {
-    document.getElementById('addPurchaseForm').classList.remove('d-none');
-}
-
-function cancelAddPurchase() {
-    document.getElementById('addPurchaseForm').classList.add('d-none');
-    document.getElementById('purchaseForm').reset();
+    }
 }
 
 // Initialize

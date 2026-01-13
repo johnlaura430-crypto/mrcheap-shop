@@ -1,6 +1,6 @@
 // Supabase configuration
-const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const SUPABASE_URL = 'https://vnuipfkdhtajjbuwmkbf.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZudWlwZmtkaHRhampidXdta2JmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyOTQzNzksImV4cCI6MjA4Mzg3MDM3OX0.Qq2q3pqoQ3No6PO2LEQuYpZZckCmP6M2b50tx719M5Q';
 
 const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -148,8 +148,8 @@ const translations = {
 
 // Simple bcrypt hash comparison (for demo - use proper auth in production)
 const users = {
-    'admin': '$2b$10$YourBcryptHashHere',
-    'brother': '$2b$10$YourBcryptHashHere'
+    'admin': 'admin123',
+    'mlawa': 'admin123'
 };
 
 let currentUser = null;
@@ -181,7 +181,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
     const password = document.getElementById('password').value;
     
     // Simple authentication (replace with Supabase auth in production)
-    if ((username === 'admin' || username === 'brother') && password === 'admin123') {
+    if ((username === 'admin' || username === 'mlawa') && password === 'admin123') {
         currentUser = username;
         document.getElementById('loginScreen').classList.add('d-none');
         document.getElementById('app').classList.remove('d-none');

@@ -1,0 +1,44 @@
+body {
+    background-color: #f8f9fa;
+}
+
+.card {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.table-responsive {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.section {
+    display: none;
+}
+
+.section.active {
+    display: block;
+}
+
+.stat-card {
+    border-radius: 10px;
+    padding: 20px;
+    margin: 10px 0;
+    color: white;
+}
+
+.stat-card.primary {
+    background: linear-gradient(45deg, #4099ff, #73b4ff);
+}
+
+.stat-card.success {
+    background: linear-gradient(45deg, #2ed8b6, #59e0c5);
+}
+
+.stat-card.warning {
+    background: linear-gradient(45deg, #ffb64d, #ffcb80);
+}
+
+.stat-card.danger {
+    background: linear-gradient(45deg, #ff5370, #ff869a);
+}
